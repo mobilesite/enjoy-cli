@@ -11,5 +11,6 @@ function core() {
 
 function checkPkgVersion() {
   console.log(pkg.version);
-  log();
+  log.verbose('test verbose');
+  log.success('test success');
 }

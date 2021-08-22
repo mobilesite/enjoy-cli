@@ -114,3 +114,72 @@ function index() {
   Hi, enjoy-cli!
   0.1.0
   info cli test
+
+npmlog这个模块的代码是非常短的，只有300多行，通过阅读源码，我们发现，它实际导出的是log对象，源码中往log对象上挂载了一系列的方法，例如：
+```js
+log.addLevel('silly', -Infinity, { inverse: true }, 'sill')
+log.addLevel('verbose', 1000, { fg: 'blue', bg: 'black' }, 'verb')
+log.addLevel('info', 2000, { fg: 'green' })
+log.addLevel('timing', 2500, { fg: 'green', bg: 'black' })
+log.addLevel('http', 3000, { fg: 'green', bg: 'black' })
+log.addLevel('notice', 3500, { fg: 'blue', bg: 'black' })
+log.addLevel('warn', 4000, { fg: 'black', bg: 'yellow' }, 'WARN')
+log.addLevel('error', 5000, { fg: 'red', bg: 'black' }, 'ERR!')
+log.addLevel('silent', Infinity)
+```
+
+所以我们才能以形如`log('info', 'xxx')`这样的形式调用到这些方法。因此我们也是可以通过`log.addLevel`来定义自己的方法的，该方法的第二个参数是log等级，第三个参数是log的前景色、背景色、字体加粗等设置。npmlog的默认等级见如下这句源码：
+```js
+// default level
+log.level = 'info'
+```
+我们会发现，默认的等级是info，info所对应的等级是2000，也就是说，在调用log的时候，level小于2000的那些都是不会被打印出来的，比如log('verbose', 'xxx')的等级是1000，所以默认是不会打印出来的。那怎么让它能打印出来呢，我们可以通过修改`log.level='verbose'`降低默认log等级，从而达到目的。
+
+因此，将utils\log\lib\index.js修改成：
+```js
+const log = require('npmlog');
+
+log.level = 'verbose';
+log.addLevel('success', 2000, {
+  fg: 'green',
+  bold: true
+});
+
+module.exports = log;
+```
+
+将core\cli\lib\index.js修改成：
+```js
+'use strict';
+
+module.exports = core;
+
+const log = require('@enjoy-cli/log');
+const pkg = require('../package.json');
+
+function core() {
+  checkPkgVersion();
+}
+
+function checkPkgVersion() {
+  console.log(pkg.version);
+  log.verbose('test verbose');
+  log.success('test success');
+}
+```
+
+这时再执行`enjoy-cli`将得到如下结果：
+```
+Hi, enjoy-cli!
+0.1.0
+verb test verbose
+success test success
+```
+
+当然，对于log的默认level，最合理的方式还是根据环境变量来分别设定，如果是执行命令时传入了--debug参数，则设置为verbose，否则还是用info。
+
+```js
+log.level = process.env.LOG_LEVEL ? process.env.LOG_LEVEL : 'info';
+```
+
+这样就可以让默认的log.level从LOG_LEVEL这个环境变量中取。至于怎么将--debug参数转成LOG_LEVEL这个环境变量，我们在参数解析时再讲。
