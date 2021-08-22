@@ -1,7 +1,15 @@
 'use strict';
 
-module.exports = cli;
+module.exports = core;
 
-function cli() {
-  // TODO
+const log = require('@enjoy-cli/log');
+const pkg = require('../package.json');
+
+function core() {
+  checkPkgVersion();
+}
+
+function checkPkgVersion() {
+  console.log(pkg.version);
+  log();
 }
